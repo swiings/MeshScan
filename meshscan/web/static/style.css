@@ -1,0 +1,291 @@
+/* MeshScan dashboard — mobile-first, minimum 375px (iPhone SE) */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0d1117;
+  --surface:  #161b22;
+  --border:   #30363d;
+  --text:     #c9d1d9;
+  --muted:    #8b949e;
+  --accent:   #58a6ff;
+  --hit:      #3fb950;
+  --warn:     #f0883e;
+  --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  --font-ui:   system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  padding: 0.75rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* ---- Header ---- */
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-size: 1.2rem;
+  letter-spacing: 0.05em;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-live { background: var(--hit); box-shadow: 0 0 6px var(--hit); }
+.dot-idle { background: var(--muted); }
+
+/* ---- Summary cards ---- */
+
+#summary-cards {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  flex: 1 1 90px;
+  min-width: 90px;
+}
+
+.card .label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+
+.card .value {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  color: var(--hit);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Detector status panel ---- */
+
+#detector-section {
+  margin-bottom: 1rem;
+}
+
+.det-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+}
+
+.det-panel-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.det-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  margin-bottom: 0.6rem;
+}
+
+.det-stat .det-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.det-stat .det-value {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.det-threshold {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.det-threshold .det-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+#threshold-slider {
+  flex: 1;
+  min-width: 80px;
+  max-width: 180px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.det-thresh-disp {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+#det-thresh-status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--hit);
+  min-width: 4rem;
+}
+
+/* ---- Mesh recommendation panel ---- */
+
+#rec-section {
+  margin-bottom: 1rem;
+}
+
+.mesh-banner {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  text-align: center;
+  padding: 0.45rem 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 0.6rem;
+  text-transform: uppercase;
+}
+.mesh-active  { background: rgba(63,185,80,0.12);  color: var(--hit);   border: 1px solid var(--hit); }
+.mesh-stale   { background: rgba(139,148,158,0.1); color: var(--muted); border: 1px solid var(--border); }
+.mesh-none    { background: rgba(240,136,62,0.1);  color: var(--warn);  border: 1px solid var(--warn); }
+.mesh-unknown { background: transparent;            color: var(--muted); border: 1px solid var(--border); }
+
+#network-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.net-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.55rem 0.8rem;
+}
+.net-card.net-active.net-default    { border-color: var(--hit); }
+.net-card.net-active.net-nondefault { border-color: var(--warn); }
+
+.net-header {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: baseline;
+  margin-bottom: 0.3rem;
+}
+.net-slot   { color: var(--accent); font-weight: bold; }
+.net-freq   { color: var(--text); }
+.net-bw     { color: var(--muted); }
+.net-preset { color: var(--hit); }
+.net-hits   { color: var(--muted); margin-left: auto; }
+.net-age    { color: var(--muted); }
+
+.net-join {
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.net-join-label {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 0 3px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* ---- Slot table ---- */
+
+#slot-section {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+th {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: normal;
+}
+
+td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+/* Active slot — first column highlighted */
+tr.active td:first-child { color: var(--hit); font-weight: bold; }
+
+/* Non-standard slot — entire row in warning color */
+tr.non-standard td { color: var(--warn); }
+
+/* Both active and non-standard */
+tr.active.non-standard td:first-child { color: var(--hit); }
+
+.empty-msg {
+  color: var(--muted);
+  text-align: center;
+  padding: 1.5rem;
+  font-family: var(--font-ui);
+}
+
+/* ---- Responsive: hide low-priority columns on narrow screens ---- */
+
+@media (max-width: 500px) {
+  .hide-narrow { display: none; }
+}

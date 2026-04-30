@@ -1,0 +1,10 @@
+# MeshScan Python dependencies
+# Install with: pip install -r requirements.txt
+#
+# SDRplay Python bindings are NOT on PyPI — install separately:
+#   https://www.sdrplay.com/api/  (download the SDRplay API package)
+#   Python bindings: https://github.com/fventuri/sdrplay-python-api
+#   or use GNU Radio gr-sdrplay3 block if GNU Radio is preferred
+
+numpy>=1.26
+flask>=3.0

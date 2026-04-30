@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>MeshScan</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header>
+    <h1>MeshScan</h1>
+    <span id="status-dot" class="dot dot-idle" title="Stream status"></span>
+  </header>
+
+  <!-- Summary cards -->
+  <section id="summary-cards">
+    <div class="card">
+      <div class="label">Total Bursts</div>
+      <div class="value" id="stat-total">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Active Slots</div>
+      <div class="value" id="stat-active">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Top Slot</div>
+      <div class="value" id="stat-top">—</div>
+    </div>
+  </section>
+
+  <!-- Detector internals + live threshold control -->
+  <section id="detector-section">
+    <div class="det-panel">
+      <div class="det-panel-title">Detector</div>
+      <div class="det-grid">
+        <div class="det-stat">
+          <div class="det-label">Noise Floor</div>
+          <div class="det-value" id="det-noise">—</div>
+        </div>
+        <div class="det-stat">
+          <div class="det-label">Peak Excess</div>
+          <div class="det-value" id="det-peak">—</div>
+        </div>
+        <div class="det-stat">
+          <div class="det-label">Candidates</div>
+          <div class="det-value" id="det-cands">—</div>
+        </div>
+        <div class="det-stat">
+          <div class="det-label">Opened (30s)</div>
+          <div class="det-value" id="det-opened">—</div>
+        </div>
+        <div class="det-stat">
+          <div class="det-label">No-chirp (30s)</div>
+          <div class="det-value" id="det-nochirp">—</div>
+        </div>
+        <div class="det-stat">
+          <div class="det-label">Emitted (30s)</div>
+          <div class="det-value" id="det-emitted">—</div>
+        </div>
+      </div>
+      <div class="det-threshold">
+        <span class="det-label">Threshold</span>
+        <input type="range" id="threshold-slider" min="5" max="40" step="0.5" value="20">
+        <span class="det-thresh-disp"><span id="det-thresh-val">20</span> dB</span>
+        <span id="det-thresh-status"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mesh status + join recommendation -->
+  <section id="rec-section">
+    <div id="mesh-status" class="mesh-banner mesh-unknown">Scanning…</div>
+    <div id="network-list"></div>
+  </section>
+
+  <!-- Slot activity table -->
+  <section id="slot-section">
+    <table id="slot-table">
+      <thead>
+        <tr>
+          <th>Slot</th>
+          <th>Center (MHz)</th>
+          <th class="hide-narrow">BW</th>
+          <th>Config</th>
+          <th>Hits</th>
+          <th>Last Seen</th>
+          <th class="hide-narrow">Peak (dB)</th>
+        </tr>
+      </thead>
+      <tbody id="slot-body">
+        <tr><td colspan="7" class="empty-msg">Waiting for data…</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <script>
+    const POLL_MS       = {{ poll_ms }};
+    const ACTIVE_WIN_S  = {{ active_window_s }};
+
+    // -----------------------------------------------------------------------
+    // Data fetch helpers
+    // -----------------------------------------------------------------------
+
+    async function fetchSlots() {
+      const res = await fetch('/api/slots');
+      return res.json();
+    }
+
+    async function fetchStats() {
+      const res = await fetch('/api/stats');
+      return res.json();
+    }
+
+    async function fetchRec() {
+      const res = await fetch('/api/recommendation');
+      return res.json();
+    }
+
+    async function fetchDetector() {
+      const res = await fetch('/api/detector');
+      return res.json();
+    }
+
+    // -----------------------------------------------------------------------
+    // Render
+    // -----------------------------------------------------------------------
+
+    function fmtTime(ts) {
+      if (!ts) return '—';
+      const ago = Math.round(Date.now() / 1000 - ts);
+      if (ago < 60)  return ago + 's ago';
+      if (ago < 3600) return Math.floor(ago / 60) + 'm ago';
+      return Math.floor(ago / 3600) + 'h ago';
+    }
+
+    function renderSlots(slots) {
+      const tbody = document.getElementById('slot-body');
+      if (!slots.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-msg">No bursts detected yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = slots.map(s => {
+        const rowClass = s.is_active ? 'active' : '';
+        const nonStd   = !s.label.startsWith('Named') ? 'non-standard' : '';
+        return `<tr class="${rowClass} ${nonStd}">
+          <td>${s.slot + 1}</td>
+          <td>${s.center_mhz.toFixed(3)}</td>
+          <td class="hide-narrow">${s.bw_khz}k</td>
+          <td>${s.label}</td>
+          <td>${s.hit_count.toLocaleString()}</td>
+          <td>${fmtTime(s.last_seen)}</td>
+          <td class="hide-narrow">${s.peak_power_db.toFixed(1)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderStats(stats) {
+      document.getElementById('stat-total').textContent =
+        stats.total_bursts.toLocaleString();
+      document.getElementById('stat-active').textContent =
+        stats.active_slots;
+      document.getElementById('stat-top').textContent =
+        stats.top_slot !== null
+          ? `Slot ${stats.top_slot + 1} (${stats.top_slot_hits.toLocaleString()})`
+          : '—';
+    }
+
+    function renderRec(rec) {
+      const banner = document.getElementById('mesh-status');
+      const list   = document.getElementById('network-list');
+
+      if (!rec.mesh_detected) {
+        banner.className   = 'mesh-banner mesh-none';
+        banner.textContent = 'NO MESH DETECTED';
+        list.innerHTML     = '';
+        return;
+      }
+
+      const hasActive = rec.networks.some(n => n.is_active);
+      banner.className   = hasActive ? 'mesh-banner mesh-active' : 'mesh-banner mesh-stale';
+      banner.textContent = hasActive ? 'MESH DETECTED — ACTIVE' : 'MESH DETECTED (no recent activity)';
+
+      list.innerHTML = rec.networks.map(n => {
+        const cls = [
+          'net-card',
+          n.is_active   ? 'net-active'    : 'net-stale',
+          n.is_default  ? 'net-default'   : 'net-nondefault',
+        ].join(' ');
+        return `<div class="${cls}">
+          <div class="net-header">
+            <span class="net-slot">Slot ${n.slot}</span>
+            <span class="net-freq">${n.center_mhz.toFixed(3)} MHz</span>
+            <span class="net-bw">${n.bw_khz}k BW</span>
+            <span class="net-preset">${n.preset}</span>
+            <span class="net-hits">${n.hit_count.toLocaleString()} hits</span>
+            <span class="net-age">${fmtTime(n.last_seen)}</span>
+          </div>
+          <div class="net-join"><span class="net-join-label">JOIN</span> ${n.join}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderDetector(det) {
+      if (!det.available) return;
+
+      const fmt1 = v => v !== null && v !== undefined ? v.toFixed(1) + ' dB' : '—';
+      document.getElementById('det-noise').textContent =
+        det.warmed_up ? fmt1(det.noise_floor_db) : 'Warming…';
+      document.getElementById('det-peak').textContent    = fmt1(det.peak_excess_db);
+      document.getElementById('det-cands').textContent   = det.active_candidates;
+      document.getElementById('det-opened').textContent  = det.opened;
+      document.getElementById('det-nochirp').textContent = det.no_chirp;
+      document.getElementById('det-emitted').textContent = det.emitted;
+
+      // Sync slider with server-side threshold only when slider is not active
+      const slider = document.getElementById('threshold-slider');
+      if (document.activeElement !== slider) {
+        slider.value = det.threshold_db;
+        document.getElementById('det-thresh-val').textContent = det.threshold_db;
+      }
+    }
+
+    async function refresh() {
+      const [slots, stats, rec, det] = await Promise.all([
+        fetchSlots(), fetchStats(), fetchRec(), fetchDetector()
+      ]);
+      renderSlots(slots);
+      renderStats(stats);
+      renderRec(rec);
+      renderDetector(det);
+    }
+
+    // -----------------------------------------------------------------------
+    // Threshold slider
+    // -----------------------------------------------------------------------
+
+    (function () {
+      const slider  = document.getElementById('threshold-slider');
+      const valSpan = document.getElementById('det-thresh-val');
+      const status  = document.getElementById('det-thresh-status');
+      let applyTimer = null;
+
+      slider.addEventListener('input', () => {
+        valSpan.textContent = slider.value;
+        status.textContent  = '';
+      });
+
+      slider.addEventListener('change', async () => {
+        status.textContent = '…';
+        clearTimeout(applyTimer);
+        try {
+          const res = await fetch('/api/detector/threshold', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ threshold_db: parseFloat(slider.value) }),
+          });
+          const d = await res.json();
+          valSpan.textContent = d.threshold_db;
+          status.textContent  = '✓ applied';
+          applyTimer = setTimeout(() => { status.textContent = ''; }, 3000);
+        } catch {
+          status.textContent = '✗ error';
+        }
+      });
+    })();
+
+    // -----------------------------------------------------------------------
+    // SSE — push-driven refresh with polling fallback
+    // -----------------------------------------------------------------------
+
+    const dot = document.getElementById('status-dot');
+
+    function connectSSE() {
+      const es = new EventSource('/stream');
+
+      es.addEventListener('refresh', () => {
+        refresh();
+      });
+
+      es.onopen = () => {
+        dot.className = 'dot dot-live';
+        dot.title = 'Live (SSE)';
+      };
+
+      es.onerror = () => {
+        dot.className = 'dot dot-idle';
+        dot.title = 'Reconnecting…';
+        es.close();
+        // Back off and retry — avoids hammering a Pi that's restarting
+        setTimeout(connectSSE, 5000);
+      };
+    }
+
+    // Initial load + SSE connection
+    refresh();
+    connectSSE();
+
+    // Polling fallback keeps time-ago labels current even when no new bursts
+    setInterval(refresh, POLL_MS * 5);
+  </script>
+
+</body>
+</html>

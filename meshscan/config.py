@@ -151,7 +151,8 @@ SDR_CENTER_FREQ_MHZ: float = 906.0
 # with BW_8_000 IF filter is the only combination that Init accepts.
 SDR_SAMPLE_RATE_MSPS: float = 8.0      # 8 Msps → 8 MHz alias-free BW
 SDR_IF_BW_MHZ: float = 8.0            # RSP IF filter width (matches sample rate)
-SDR_GAIN_DB: int = 40                  # LNA gain reduction — tune for local noise floor
+SDR_GAIN_DB: int = 59                  # IF gain reduction (20–59 dB); raise to prevent ADC saturation
+SDR_LNA_STATE: int = 3                 # LNA attenuation state (0=max gain); raise near strong local transmitters
 SDR_ANTENNA_PORT: str = "A"            # RSPduo antenna port (A or B)
 SDR_DEVICE_SERIAL: str = ""            # empty → use first detected RSPduo
 

@@ -350,7 +350,7 @@ class SDRplayCapture:
 
         # --- Gain (manual — AGC off for consistent noise floor estimation) ---
         ch.tunerParams.gain.gRdB     = config.SDR_GAIN_DB
-        ch.tunerParams.gain.LNAstate = 0          # LNA gain reduction = minimum
+        ch.tunerParams.gain.LNAstate = config.SDR_LNA_STATE
         ch.tunerParams.gain.minGr    = _NORMAL_MIN_GR
         ch.ctrlParams.agc.enable     = _AGC_DISABLE
         ch.ctrlParams.agc.setPoint_dBfs = -60

@@ -168,7 +168,7 @@ class BurstDetector:
             # Many bins hot but nothing ever confirmed → threshold is below the
             # ambient interference floor; candidates stay open indefinitely and
             # real chirp data gets diluted by noise.
-            rec_db  = min(40.0, round(thresh + 4.0, 1))
+            rec_db  = min(65.0, round(thresh + 4.0, 1))
             rec_why = (
                 f"Many open candidates, no detections — ambient floor may exceed "
                 f"{thresh:.0f} dB; try raising to {rec_db:.0f} dB"

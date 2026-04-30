@@ -227,7 +227,7 @@ def api_set_threshold() -> Response:
     except (KeyError, TypeError, ValueError):
         return jsonify({"error": "threshold_db required"}), 400
 
-    val = max(5.0, min(40.0, val))
+    val = max(5.0, min(65.0, val))
     config.ENERGY_THRESHOLD_DB = val
     return jsonify({"threshold_db": val})
 

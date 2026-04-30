@@ -123,12 +123,12 @@ def resolve_config_label(slot: int, bw_khz: int) -> str:
 
     We can narrow to BW class but not SF without full demodulation, so default-
     slot detections are labeled as a BW group rather than a single named preset.
-    Non-default slots are flagged with their slot number so operators can spot
-    sub-networks like the Fairfax County slot-9 cluster.
+    Non-default slots include their BW class so operators can tell LongFast-class
+    sub-networks (250k) from LongSlow-class ones (125k).
     """
     if slot == DEFAULT_SLOT_INDEX:
         return f"Named ({bw_khz}k)"
-    return f"Non-standard slot {slot + 1}"
+    return f"Non-default ({bw_khz}k)"
 
 
 # ---------------------------------------------------------------------------

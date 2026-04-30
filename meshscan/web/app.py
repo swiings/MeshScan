@@ -141,10 +141,12 @@ def api_recommendation() -> Response:
                 preset = "LongSlow"
                 join   = "Region: US  ·  Preset: LongSlow  ·  Channel: Default (public)"
         else:
-            preset = f"{bw}k BW, non-default"
+            bw_name = "LongFast-class" if bw >= 250 else "LongSlow-class"
+            preset = f"{bw_name} · Slot {slot + 1}"
             join   = (
-                f"Non-default sub-network on Slot {slot + 1} "
-                f"({r['center_mhz']:.3f} MHz) — channel name & key required to join"
+                f"Regional sub-network · {r['center_mhz']:.3f} MHz · "
+                f"Preset: {bw_name} ({bw}k BW) · "
+                f"Requires matching channel name & key to join"
             )
 
         networks.append({

@@ -325,11 +325,15 @@ class BurstDetector:
             )
             return
 
-        if not self._is_chirp(cand.centroids_mhz):
+        passed, up_x, dn_x, total = self._is_chirp(cand.centroids_mhz)
+        if not passed:
             self._stats_nochirp += 1
-            log.debug(
-                "slot %d rejected: chirp test failed  frames=%d  peak=%.1f dB",
+            ratio = max(up_x, dn_x) / total if total > 0 else 0.0
+            log.info(
+                "slot %d chirp FAIL: frames=%d peak=%.1fdB  "
+                "up=%d dn=%d total=%d ratio=%.2f  (need total≥%d ratio≥0.75)",
                 slot + 1, frames, cand.peak_excess_db,
+                up_x, dn_x, total, ratio, config.CHIRP_MIN_STREAK_FRAMES,
             )
             return
 
@@ -357,29 +361,19 @@ class BurstDetector:
             frame_count   = len(cand.centroids_mhz),
         ))
 
-    def _is_chirp(self, centroids_mhz: list[float]) -> bool:
+    def _is_chirp(self, centroids_mhz: list[float]) -> tuple[bool, int, int, int]:
         """
+        Returns (passed, up_crossings, dn_crossings, total_crossings).
+
         True if the centroid sequence shows a sustained directional frequency sweep.
-
-        Uses directional bin-crossing dominance rather than streak length.
-
-        A LoRa chirp moves monotonically through the slot bandwidth — all bin
-        crossings go in the same direction (upward) until a symbol-boundary wrap
-        (large reverse jump, excluded by _WRAP_THRESHOLD_KHZ).  Noise and DC
-        spikes produce roughly equal upward and downward crossings.
-
-        Gate: at least CHIRP_MIN_STREAK_FRAMES bin crossings total, with ≥ 75%
-        in the dominant direction.  Symbol-boundary wraps (|shift| ≥ _WRAP_THRESHOLD_KHZ)
-        are excluded from the crossing count so they don't dilute the dominance ratio.
-
-        This replaces the previous streak-based test, which broke down when sidelobe
-        leakage from a strong nearby signal (SNAX at 60 dB) created centroid noise
-        that occasionally reversed direction, resetting the streak counter.
+        Uses directional bin-crossing dominance: at least CHIRP_MIN_STREAK_FRAMES
+        crossings total, with ≥ 75% in the dominant direction.  Symbol-boundary
+        wraps (|shift| ≥ _WRAP_THRESHOLD_KHZ) are excluded.
         """
         if len(centroids_mhz) < 2:
-            return False
+            return False, 0, 0, 0
 
-        half_bin = self._bin_khz * 0.5   # minimum shift to count as a bin crossing
+        half_bin = self._bin_khz * 0.5
 
         up_x = dn_x = 0
         for i in range(len(centroids_mhz) - 1):
@@ -391,7 +385,7 @@ class BurstDetector:
 
         total = up_x + dn_x
         if total < config.CHIRP_MIN_STREAK_FRAMES:
-            return False
+            return False, up_x, dn_x, total
 
         dominant = max(up_x, dn_x)
-        return dominant / total >= 0.75
+        return dominant / total >= 0.75, up_x, dn_x, total

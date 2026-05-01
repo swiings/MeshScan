@@ -185,7 +185,7 @@ STFT_OVERLAP_FRACTION: float = 0.75
 # gate provides false-positive rejection downstream.
 # Raise toward 20 if too many false positives appear; lower toward 8 for
 # weak/distant signals in a very quiet RF environment.
-ENERGY_THRESHOLD_DB: float = 20.0
+ENERGY_THRESHOLD_DB: float = 39.0
 
 # Chirp confirmation: for a detection to be confirmed as a LoRa chirp (vs.
 # a narrowband interferer), the burst centroid must shift by at least this
